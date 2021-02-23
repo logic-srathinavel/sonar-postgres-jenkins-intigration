@@ -1,0 +1,36 @@
+version: "3"
+
+networks:
+sonarnet:
+  driver: bridge
+
+services:
+  sonarqube:
+   #user: 54322:54322
+    image: sonarqube
+    ports:
+      - "9000:9000"
+    networks:
+      - sonarnet
+    environment:
+      - sonar.jdbc.url=jdbc:postgresql://db/sonar
+      - sonar.jdbc.username=sonar
+      - sonar.jdbc.password=sonar
+    volumes:
+      - /u01/sonar/data/sonarqube/conf:/opt/sonarqube/conf
+      - /u01/sonar/data/sonarqube/logs:/opt/sonarqube/logs
+      - /u01/sonar/data/sonarqube/temp:/opt/sonarqube/temp
+      - /u01/sonar/data/sonarqube/data:/opt/sonarqube/data
+      - /u01/sonar/data/sonarqube/extensions:/opt/sonarqube/extensions
+      - /u01/sonar/data/sonarqube/bundled_plugins:/opt/sonarqube/lib/bundled-plugins
+
+  db:
+    image: postgres
+    networks:
+      - sonarnet
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+    volumes:
+      - /data/sonarqube/postgresql:/var/lib/postgresql
+      - /data/sonarqube/postgresql_data:/var/lib/postgresql/data
