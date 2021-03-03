@@ -1,0 +1,33 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('git') {
+            steps {
+                git 'https://github.com/yankils/javademoproject.git'
+            }
+        }
+        stage("Code-Check"){
+            environment {
+              scannerHome = tool 'sonarqubeScanner'
+             }           
+            steps{
+                  withSonarQubeEnv('sonarqube') {
+                      sh "${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=sample \
+                           -Dsonar.projectName=sample \
+                           -Dsonar.projectVersion=1.0 \
+                           -Dsonar.sources=/u00/jenkins/workspace/sonar_test_pipeline/src/ \
+                           -Dsonar.language=java"
+                  }
+            }
+		}
+		stage("Quality Gate") {
+            steps {
+              timeout(time: 1, unit: 'HOURS') {
+                waitForQualityGate abortPipeline: true
+              }
+            }
+        }
+    }
+}
