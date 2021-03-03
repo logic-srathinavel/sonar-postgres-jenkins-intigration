@@ -1,0 +1,49 @@
+pipeline{
+    agent any
+    tools {
+        ant 'Ant'
+        jdk 'JDK V8'
+    }
+    stages{
+        stage("Git checkout"){
+            steps{
+                git credentialsId: 'Sathish Kumar(Gitlab)', url: 'https://gitlab.com/SathishKumar_Logic/xstore_easy_rewards_v19_build'
+                echo "${WORKSPACE}"
+            }
+        }
+        stage("Code-Check"){
+            environment {
+              scannerHome = tool 'sonarqubeScanner'
+             }           
+            steps{
+                  withSonarQubeEnv('sonarqube') {
+                      sh "${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=XSTORE \
+                           -Dsonar.projectName=XSTORE_TEST \
+                           -Dsonar.projectVersion=1.0 \
+                           -Dsonar.sources=${WORKSPACE}/xst_pos/src \
+                           -Dsonar.java.binaries=${WORKSPACE}/xst_pos/classes \
+                           -Dsonar.language=java"
+                  }
+            }
+        }
+        stage("Quality Gate") {
+            steps {
+              timeout(time: 1, unit: 'HOURS') {
+                waitForQualityGate abortPipeline: true
+              }
+            }
+        }
+        stage("Build jar"){
+            steps{
+                sh "ant -buildfile xst/jenkins-build.xml distribution"
+            }
+        }
+    }
+    post{
+        success{
+            archiveArtifacts "distro-full/"
+            //sshPublisher(publishers: [sshPublisherDesc(configName: 'Ansible_host', transfers: [sshTransfer(cleanRemote: false, excludes: '', execCommand: 'ansible-playbook playbook-copyfile.yml -i inventory.txt --limit "linux1"', execTimeout: 120000, flatten: false, makeEmptyDirs: false, noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: '/u00/ansible/codes/Exercise-1-Copyfile', remoteDirectorySDF: false, removePrefix: 'distro-full/', sourceFiles: 'distro-full/*.zip')], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
+        }
+    }
+}
